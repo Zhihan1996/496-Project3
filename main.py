@@ -30,6 +30,9 @@ def check_login(username, password, db):
 
 
 def login(db):
+    welcome = "Hi, here is the login interface\n"
+    print("-"*len(welcome))
+    print(welcome)
     while True:
         username = input("Please type your username: \n")
         print("\n")
@@ -38,10 +41,12 @@ def login(db):
         if not check_login(username=username, password=password, db=db):
             print("Log in failed, please try again")
         else:
-            return username
+            menu(db=db, username=username)
 
 def menu(db, username):
-    print("\nHi, here is the Student Menu")
+    welcome = "Hi, here is the Student Menu"
+    print("\n" + "-"*len(welcome))
+    print(welcome)
     print("You courses are listed as follow:\n")
 
     # Find local time and construct query
@@ -65,6 +70,9 @@ def menu(db, username):
             print(item["UoSCode"])
         print("=" * len(item["UoSCode"]))
 
+    choose(db)
+
+def choose(db):
     # List the choices
     print("\nYou have several options:")
     print("Type 1 for Transcript")
@@ -74,7 +82,20 @@ def menu(db, username):
     print("Type 5 for Logout\n")
     choice = input("Your choice: ")
 
-    return choice
+    if choice == str(1):
+        pass
+    elif choice == str(2):
+        pass
+    elif choice == str(3):
+        pass
+    elif choice == str(4):
+        pass
+    elif choice == str(5):
+        login(db)
+    else:
+        print("Please type in number from 1 to 5")
+        choose(db)
+
 
 
     
@@ -82,12 +103,8 @@ def menu(db, username):
 def main():
     # Initiate the database
     with DB() as db:
-        # Initiate the interface
-        print("Hi, here is the login interface\n")
-
-        # Login
-        username = login(db=db)
-        choice = menu(username=username,db=db)
+        # Initiate the procedure
+        login(db=db)
 
 
 
