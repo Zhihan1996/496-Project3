@@ -1,0 +1,86 @@
+TABLE `classroom` (
+  `ClassroomId` varchar(6) NOT NULL DEFAULT '',
+  `Seats` int(11) NOT NULL,
+  `Type` varchar(7) DEFAULT NULL,
+  PRIMARY KEY (`ClassroomId`)
+)
+
+TABLE `faculty` (
+  `Id` char(9) NOT NULL DEFAULT '',
+  `Name` varchar(20) NOT NULL,
+  `DeptId` char(3) NOT NULL,
+  `Password` varchar(10) NOT NULL,
+  `Address` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`Id`)
+)
+
+TABLE `lecture` (
+  `UoSCode` char(8) NOT NULL DEFAULT '',
+  `Semester` char(2) NOT NULL DEFAULT '',
+  `Year` int(11) NOT NULL DEFAULT '0',
+  `ClassTime` varchar(5) DEFAULT NULL,
+  `ClassroomId` varchar(6) NOT NULL DEFAULT '',
+  PRIMARY KEY (`UoSCode`,`Semester`,`Year`,`ClassroomId`),
+  UNIQUE KEY `ClassroomConflict` (`ClassroomId`,`Semester`,`Year`,`ClassTime`),
+  CONSTRAINT `fk1` FOREIGN KEY (`UoSCode`, `Semester`, `Year`) REFERENCES `uosoffering` (`UoSCode`, `Semester`, `Year`) ON DELETE NO ACTION ON UPDATE CASCADE,
+  CONSTRAINT `fk2` FOREIGN KEY (`ClassroomId`) REFERENCES `classroom` (`ClassroomId`) ON DELETE NO ACTION ON UPDATE NO ACTION
+)
+
+TABLE `requires` (
+  `UoSCode` char(8) NOT NULL DEFAULT '',
+  `PrereqUoSCode` char(8) NOT NULL DEFAULT '',
+  `EnforcedSince` date NOT NULL,
+  PRIMARY KEY (`UoSCode`,`PrereqUoSCode`),
+  KEY `PrereqUoSCode` (`PrereqUoSCode`),
+  CONSTRAINT `requires_ibfk_1` FOREIGN KEY (`UoSCode`) REFERENCES `unitofstudy` (`UoSCode`),
+  CONSTRAINT `requires_ibfk_2` FOREIGN KEY (`PrereqUoSCode`) REFERENCES `unitofstudy` (`UoSCode`)
+)
+
+TABLE `student` (
+  `Id` int(11) NOT NULL DEFAULT '0',
+  `Name` varchar(20) NOT NULL,
+  `Password` varchar(10) NOT NULL,
+  `Address` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`Id`)
+)
+  
+TABLE `transcript` (
+  `StudId` int(11) NOT NULL DEFAULT '0',
+  `UoSCode` char(8) NOT NULL DEFAULT '',
+  `Semester` char(2) NOT NULL DEFAULT '',
+  `Year` int(11) NOT NULL DEFAULT '0',
+  `Grade` varchar(2) DEFAULT NULL,
+  PRIMARY KEY (`StudId`,`UoSCode`,`Semester`,`Year`),
+  KEY `fk1_idx` (`UoSCode`,`Semester`,`Year`)
+)
+
+TABLE `unitofstudy` (
+  `UoSCode` char(8) NOT NULL DEFAULT '',
+  `DeptId` char(3) NOT NULL,
+  `UoSName` varchar(40) NOT NULL,
+  `Credits` int(11) NOT NULL,
+  PRIMARY KEY (`UoSCode`),
+  UNIQUE KEY `DeptId` (`DeptId`,`UoSName`)
+)
+
+TABLE `uosoffering` (
+  `UoSCode` char(8) NOT NULL DEFAULT '',
+  `Semester` char(2) NOT NULL DEFAULT '',
+  `Year` int(11) NOT NULL DEFAULT '0',
+  `Textbook` varchar(50) DEFAULT NULL,
+  `Enrollment` int(11) DEFAULT NULL,
+  `MaxEnrollment` int(11) DEFAULT NULL,
+  `InstructorId` char(9) DEFAULT NULL,
+  PRIMARY KEY (`UoSCode`,`Semester`,`Year`),
+  KEY `InstructorId` (`InstructorId`),
+  CONSTRAINT `uosoffering_ibfk_1` FOREIGN KEY (`UoSCode`) REFERENCES `unitofstudy` (`UoSCode`),
+  CONSTRAINT `uosoffering_ibfk_2` FOREIGN KEY (`UoSCode`, `Semester`) REFERENCES `whenoffered` (`UoSCode`, `Semester`),
+  CONSTRAINT `uosoffering_ibfk_3` FOREIGN KEY (`InstructorId`) REFERENCES `faculty` (`Id`)
+)
+
+TABLE `whenoffered` (
+  `UoSCode` char(8) NOT NULL DEFAULT '',
+  `Semester` char(2) NOT NULL DEFAULT '',
+  PRIMARY KEY (`UoSCode`,`Semester`)
+)
+
