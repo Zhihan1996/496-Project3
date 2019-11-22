@@ -24,6 +24,15 @@ def year_quarter():
     return year, quarter
 
 
+def next_quarter(year, quarter):
+    if quarter == "Q2":
+        year += 1
+        quarter = "Q1"
+    else:
+        quarter = "Q2"
+
+    return year, quarter
+
 def check_login(username, password, db):
     query = "select distinct Password " \
             "from student " \
@@ -131,16 +140,100 @@ def transcript(db, sid, username):
                 print("Course Enroll: " + str(data["Enrollment"]))
                 print("Max Enroll: " + str(data["MaxEnrollment"]))
                 print("Course Lecturer: " + str(data["Name"]))
-                print("Course Grade: " + str(data["Grade"] + "\n"))
+                print("Course Grade: " + str(data["Grade"]) + "\n")
 
 
 def enroll(db, sid, username):
+    welcome = "Hi, here is the Enroll Interface"
+    print("\n" + "-" * 60)
+    print(welcome)
+    print("All the courses are listed as follow:\n")
+
     year, quarter = year_quarter()
 
     # find all the courses that are available now
-    db.callproc('find_enroll', args=[sid, year, quarter])
+    all_course_name_list = []
+    all_course_list = []
+    # current quarter
+    db.callproc('find_enroll_all', args=[sid, year, quarter])
     data = db.fetchall()
-    print(data)
+    for item in data:
+        course = str(item["UoSCode"]) + "  " + str(item["UoSName"])
+        all_course_list.append(str(item["UoSCode"]))
+        all_course_name_list.append(course)
+
+    # next quarter
+    year, quarter = next_quarter(year, quarter)
+
+    db.callproc('find_enroll_all', args=[sid, year, quarter])
+    data = db.fetchall()
+    for item in data:
+        course = str(item["UoSCode"]) + "  " + str(item["UoSName"])
+        if course not in all_course_name_list:
+            all_course_list.append(str(item["UoSCode"]))
+            all_course_name_list.append(course)
+
+    # print all courses
+    for course in all_course_name_list:
+        print(course + "\n")
+
+    # Interact
+    while True:
+        print("\nWhich course are you interested in enrolling? \n "
+              "Type 1 to come back.\n"
+              "Or type the course number\n")
+        course = input("Your choice > ")
+
+        if course == str(1):
+            menu(db, sid, username)
+        elif course not in all_course_list:
+            print("Please type a valid course number")
+        else:
+            # find all the course that are available for the student
+            year, quarter = year_quarter()
+            db.callproc('find_enroll', args=[sid, year, quarter])
+            data = db.fetchall()
+            ava_course_list = []
+            for item in data:
+                ava_course_list.append(item["UoSCode"])
+
+            year, quarter = next_quarter(year, quarter)
+
+            db.callproc('find_enroll', args=[sid, year, quarter])
+            data = db.fetchall()
+            for item in data:
+                if item["UoSCode"] not in ava_course_list:
+                    ava_course_list.append(item["UoSCode"])
+
+
+            # determine the reason
+            if course in ava_course_list:
+                db.callproc('enroll_class', args=[sid, course, year, quarter])
+                print("Successfully enroll in " + course)
+            else:
+                year, quarter = year_quarter()
+                query = "select UoSCode, Enrollment, MaxEnrollment " \
+                        "from uosoffering " \
+                        "where UoSCode=" + '\'' + course + '\'' + " " \
+                        "and Semester=" + "\'" + str(quarter) + "\'" + " " \
+                        "and Year=" + "\'" + str(year) + "\'"
+                db.execute(query)
+                data = db.fetchall()[0]
+                if int(data["MaxEnrollment"]) <= int(data["Enrollment"]):
+                    print("This course is full")
+                else:
+                    print("Your have not cleared the prerequisites")
+                    # find the prerequisite
+                    db.callproc('find_enroll_all', args=[sid, year, quarter])
+                    all_data = db.fetchall()
+                    for item in all_data:
+                        if item["UoSCode"] == course:
+                            prerequisite = item["PrereqUoSCode"]
+                    print("There is the prerequisite: \n")
+                    print(prerequisite)
+                    print("\n")
+
+
 
 
 
@@ -150,24 +243,51 @@ def withdraw(db, sid, username):
     print("Here is the withdraw page.\n")
 
     year, quarter = year_quarter()
-    quarter = "Q2"
 
     # Find the courses that could be withdrawed
     db.callproc('able_withdraw', args=[sid, year, quarter])
     data = db.fetchall()
+    course_number_list = []
     course_list = []
     if len(data) != 0:
         for item in data:
-            course_list.append(item["UoSCode"])
+            course = [item["UoSCode"], item["Year"], item["Semester"]]
+            course_number_list.append(item["UoSCode"])
+            course_list.append(course)
             print("Course Number: " + str(item["UoSCode"]))
-            print("Course Title: " + str(item["UoSName"] + "\n"))
+            print("Course Title: " + str(item["UoSName"]))
+            print("Course Year: " + str(item["Year"]))
+            print("Course Quarter: " + str(item["Semester"]) + "\n")
+
+    year, quarter = next_quarter(year, quarter)
+    db.callproc('able_withdraw', args=[sid, year, quarter])
+    data = db.fetchall()
+    if len(data) != 0:
+        for item in data:
+            course = [item["UoSCode"], item["Year"], item["Semester"]]
+            if course not in course_list:
+                course_number_list.append(item["UoSCode"])
+                course_list.append(course)
+                print("Course Number: " + str(item["UoSCode"]))
+                print("Course Title: " + str(item["UoSName"]))
+                print("Course Year: " + str(item["Year"]))
+                print("Course Quarter: " + str(item["Semester"]) + "\n")
+
 
     # Withdraw a course
-    print("Please type in the number of the course you want to withdraw.")
 
     while True:
+        print("Please type in the number of the course you want to withdraw.")
+        print("Or type 1 to come back")
         course = input("Course to withdraw > ")
-        if course in course_list:
+
+        if course == "1":
+            menu(db, sid, username)
+
+        year = input("Which year > ")
+        quarter = input("Which quarter > ")
+
+        if course in course_number_list:
             db.callproc('withdraw_class', args=[sid, course, year, quarter])
             # detect the trigger
             query = "select c " \
@@ -218,8 +338,6 @@ def person(db, sid, username):
             print("Length of address should be less than 50\n")
 
 
-
-
 def choose(db, sid, username):
     # List the choices
     print("\nYou have several options:")
@@ -247,15 +365,11 @@ def choose(db, sid, username):
 
 
 
-    
-
 def main():
     # Initiate the database
     with DB() as db:
         # Initiate the procedure
         login(db=db)
-
-
 
 
 
