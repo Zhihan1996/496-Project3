@@ -10,4 +10,3 @@ update student set Address=addr where Id = sid;
 update student set Password=p where Id = sid;
 end //
 delimiter ;
--- call personal_update('3213','dsfa','chifgha');

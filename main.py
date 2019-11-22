@@ -15,6 +15,14 @@ class DB():
         self.cur.close()
         self.connect.close()
 
+def year_quarter():
+    localtime = time.localtime(time.time())
+    year = localtime.tm_year
+    month = localtime.tm_mon
+    quarter = "Q1" if month < 7 else "Q2"
+
+    return year, quarter
+
 
 def check_login(username, password, db):
     query = "select distinct Password " \
@@ -58,16 +66,14 @@ def menu(db, sid, username):
     print(welcome)
     print("You courses are listed as follow:\n")
 
-    # Find local time and construct query
-    localtime = time.localtime(time.time())
-    year = localtime.tm_year
-    month = localtime.tm_mon
-    semester = "Q1" if month < 7 else "Q2"
+    # Construct query
+    year, quarter = year_quarter()
+
     query = "select distinct UoSCode " \
             "from student, transcript " \
             "where student.Id=transcript.StudId " \
             "and Year=" + str(year) +" " \
-            "and Semester=" + "\'" + str(semester) + "\'" + " " \
+            "and Semester=" + "\'" + str(quarter) + "\'" + " " \
             "and student.Name=" + "\'" + str(username) + "\'"
 
 
@@ -128,6 +134,88 @@ def transcript(db, sid, username):
                 print("Course Grade: " + str(data["Grade"] + "\n"))
 
 
+def enroll(db, sid, username):
+    year, quarter = year_quarter()
+
+    # find all the courses that are available now
+    db.callproc('find_enroll', args=[sid, year, quarter])
+    data = db.fetchall()
+    print(data)
+
+
+
+
+def withdraw(db, sid, username):
+    print("\n" + '-' * 60)
+    print("Here is the withdraw page.\n")
+
+    year, quarter = year_quarter()
+    quarter = "Q2"
+
+    # Find the courses that could be withdrawed
+    db.callproc('able_withdraw', args=[sid, year, quarter])
+    data = db.fetchall()
+    course_list = []
+    if len(data) != 0:
+        for item in data:
+            course_list.append(item["UoSCode"])
+            print("Course Number: " + str(item["UoSCode"]))
+            print("Course Title: " + str(item["UoSName"] + "\n"))
+
+    # Withdraw a course
+    print("Please type in the number of the course you want to withdraw.")
+
+    while True:
+        course = input("Course to withdraw > ")
+        if course in course_list:
+            db.callproc('withdraw_class', args=[sid, course, year, quarter])
+            # detect the trigger
+            query = "select c " \
+                    "from monitor " \
+                    "where item=\'mon\'"
+            db.execute(query)
+            data = db.fetchall()[0]['c']
+
+            if data == str(1):
+                print("!" * 50)
+                print("Enrolled number less than half of the maxenroll")
+                print("!" * 50)
+
+            print("Withdraw finish")
+            # menu(db, sid, username)
+        else:
+            print("Please choose a valid course\n")
+
+
+
+
+def person(db, sid, username):
+    print("\n" + '-'*60)
+    print("Here is the personal information page.")
+
+    query = "select * " \
+            "from student " \
+            "where Name=\'" + str(username) + "\'"
+    db.execute(query)
+    data = db.fetchall()[0]
+    print("\nID: " + str(data["Id"]))
+    print("Name: " + str(data["Name"]))
+    print("Password: " + str(data["Password"]))
+    print("Address: " + str(data["Address"]) + "\n")
+
+    print("You could change your password and address here.")
+
+    while True:
+        password = input("Please type you password > ")
+        address = input("Please type you address > ")
+        try:
+            db.callproc('personal_update', args=[sid, password, address])
+            print("Update success")
+            menu(db, sid, username)
+        except:
+            print("\nUpdate fails")
+            print("Length of password should be less than 10")
+            print("Length of address should be less than 50\n")
 
 
 
@@ -145,11 +233,11 @@ def choose(db, sid, username):
     if choice == str(1):
         transcript(db, sid, username)
     elif choice == str(2):
-        pass
+        enroll(db, sid, username)
     elif choice == str(3):
-        pass
+        withdraw(db, sid, username)
     elif choice == str(4):
-        pass
+        person(db, sid, username)
     elif choice == str(5):
         print("Successfully logout\n")
         login(db)
