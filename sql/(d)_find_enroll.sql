@@ -6,7 +6,7 @@ create procedure find_enroll(
 	in sem char(20)
 )
 begin
-select t1.UoSCode, t3.UoSName, t2.StudId,t4.PrereqUoSCode,t4.EnforcedSince,sum(t5.StudId),t5.Grade,t1.Enrollment,t1.MaxEnrollment,t7.Type, t6.ClassroomId
+select t1.UoSCode, t3.UoSName
 from (uosoffering t1 left outer join(select * from transcript where StudId = sid  ) as t2 on t1.UoSCode = t2.UoSCode) left outer join
 (requires t4 left outer join(select * from transcript where StudId = sid  ) as t5 on t5.UoSCode = t4.PrereqUoSCode) on t1.UoSCode=t4.UoSCode,
 unitofstudy t3,lecture t6,classroom t7
@@ -19,7 +19,7 @@ t6.Semester = sem and
 t6.Year = y
 and t4.PrereqUoSCode is null
 union
-select t1.UoSCode, t3.UoSName, t2.StudId,t4.PrereqUoSCode,t4.EnforcedSince,sum(t5.StudId),t5.Grade,t1.Enrollment,t1.MaxEnrollment,t7.Type, t6.ClassroomId
+select t1.UoSCode, t3.UoSName
 from (uosoffering t1 left outer join(select * from transcript where StudId = sid  ) as t2 on t1.UoSCode = t2.UoSCode) left outer join
 (requires t4 left outer join(select * from transcript where StudId = sid  ) as t5 on t5.UoSCode = t4.PrereqUoSCode) on t1.UoSCode=t4.UoSCode,
 unitofstudy t3,lecture t6,classroom t7
