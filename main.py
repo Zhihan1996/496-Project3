@@ -29,9 +29,10 @@ def check_login(username, password, db):
     return False
 
 
+
 def login(db):
     welcome = "Hi, here is the login interface\n"
-    print("-"*len(welcome))
+    print("-"*60)
     print(welcome)
     while True:
         username = input("Please type your username: \n")
@@ -39,13 +40,21 @@ def login(db):
         password = input("Please type your password: \n")
 
         if not check_login(username=username, password=password, db=db):
-            print("Log in failed, please try again")
+            print("\nLog in failed, please try again\n")
         else:
-            menu(db=db, username=username)
+            # find out the student's id
+            id_query = "select distinct Id " \
+                       "from student " \
+                       "where Name=" + "\'" + str(username) + "\'"
+            db.execute(id_query)
+            data = db.fetchall()
+            sid = data[0]["Id"]
+            menu(db=db, sid=sid, username=username)
 
-def menu(db, username):
+
+def menu(db, sid, username):
     welcome = "Hi, here is the Student Menu"
-    print("\n" + "-"*len(welcome))
+    print("\n" + "-"*60)
     print(welcome)
     print("You courses are listed as follow:\n")
 
@@ -61,6 +70,7 @@ def menu(db, username):
             "and Semester=" + "\'" + str(semester) + "\'" + " " \
             "and student.Name=" + "\'" + str(username) + "\'"
 
+
     # Query the result and print it
     success = db.execute(query)
     if success:
@@ -70,9 +80,59 @@ def menu(db, username):
             print(item["UoSCode"])
         print("=" * len(item["UoSCode"]))
 
-    choose(db)
 
-def choose(db):
+
+    choose(db, sid, username)
+
+
+
+def transcript(db, sid, username):
+    welcome = "Hi, here is the Transcript Interface"
+    print("\n" + "-" * 60)
+    print(welcome)
+    print("You courses and corresponding grades are listed as follow:\n")
+
+    # print the courses and grades
+    success = db.callproc('transc', args=[sid])
+    if success:
+        data = db.fetchall()
+        # print out the results
+        print("COURSE    GRADA")
+        print("=" * len("COURSE    GRADA"))
+        for item in data:
+            information = str(item["UoSCode"]) + "  " + str(item["Grade"])
+            print(information)
+        print("=" * len("COURSE    GRADA"))
+
+
+    while True:
+        print("If you want to come back, type 1")
+        print("For course detail, type the course number\n\n")
+        choice = input("Your choice: ")
+        if choice == str(1):
+            menu(db, sid, username)
+        else:
+            db.callproc('transcript_details', args=[sid, choice])
+            data = db.fetchall()
+            if len(data) == 0:
+                print("\nPlease type a correct input")
+            else:
+                data = data[0]
+                print("\nCourse Number: " + str(data["UoSCode"]))
+                print("Course Title: " + str(data["UoSName"]))
+                print("Course Year: " + str(data["Year"]))
+                print("Course Quarter: " + str(data["Semester"]))
+                print("Course Enroll: " + str(data["Enrollment"]))
+                print("Max Enroll: " + str(data["MaxEnrollment"]))
+                print("Course Lecturer: " + str(data["Name"]))
+                print("Course Grade: " + str(data["Grade"] + "\n"))
+
+
+
+
+
+
+def choose(db, sid, username):
     # List the choices
     print("\nYou have several options:")
     print("Type 1 for Transcript")
@@ -83,7 +143,7 @@ def choose(db):
     choice = input("Your choice: ")
 
     if choice == str(1):
-        pass
+        transcript(db, sid, username)
     elif choice == str(2):
         pass
     elif choice == str(3):
@@ -91,10 +151,11 @@ def choose(db):
     elif choice == str(4):
         pass
     elif choice == str(5):
+        print("Successfully logout\n")
         login(db)
     else:
-        print("Please type in number from 1 to 5")
-        choose(db)
+        print("Please type in a integer between 1 and 5")
+        choose(db, sid, username)
 
 
 
