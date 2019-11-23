@@ -1,6 +1,6 @@
 delimiter //
-drop procedure if exists find_enroll //
-create procedure find_enroll(
+drop procedure if exists find_enroll_all //
+create procedure find_enroll_all(
 	in sid char(20),
 	in y char(20),
 	in sem char(20)
